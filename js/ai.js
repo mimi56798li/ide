@@ -2,6 +2,7 @@
 import theme from "./theme.js";
 import configuration from "./configuration.js";
 import { sourceEditor } from "./ide.js";
+import { getSuggestionsFromAPI } from "./query.js"; // Assuming we'll use an external service for suggestions
 
 const THREAD = [
     {
@@ -36,12 +37,47 @@ If their message is unrelated to the code, focus solely on their conversational 
         `.trim()
     }
 ];
+// 🔹 Autocomplete Suggestions: Trigger function when user types
+export async function getAutocompleteSuggestions(inputValue) {
+    if (inputValue.length < 1) return []; // Don't show suggestions if the input is empty.
 
+    // Call an external API to get suggestions (e.g., based on user input)
+    const suggestions = await getSuggestionsFromAPI(inputValue);
+    return suggestions;
+}
 document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("judge0-chat-form").addEventListener("submit", async function (event) {
         event.preventDefault();
 
+        
         const userInput = document.getElementById("judge0-chat-user-input");
+        const suggestionBox = document.createElement("div");
+        suggestionBox.classList.add("autocomplete-box");
+        userInput.parentNode.appendChild(suggestionBox);
+
+        userInput.addEventListener("input", async function () {
+            const inputValue = this.value.trim();
+            if (inputValue.length === 0) {
+                suggestionBox.innerHTML = "";
+                return;
+            }
+    
+            const suggestions = await getAutocompleteSuggestions(inputValue);
+            suggestionBox.innerHTML = ""; // Clear previous suggestions
+    
+            
+        suggestions.forEach(suggestion => {
+            const suggestionItem = document.createElement("div");
+            suggestionItem.classList.add("autocomplete-item");
+            suggestionItem.textContent = suggestion;
+            suggestionItem.addEventListener("click", function () {
+                userInput.value = suggestion;
+                suggestionBox.innerHTML = "";
+            });
+            suggestionBox.appendChild(suggestionItem);
+        });
+    });
+
         const userInputValue = userInput.value.trim();
         if (userInputValue === "") {
             return;

@@ -1,5 +1,56 @@
 import { usePuter } from "./puter.js";
 import configuration from "./configuration.js";
+import * as monaco from "monaco-editor";
+import { getAutocompleteSuggestions } from "./ai.js";
+
+// Create Monaco editor instance
+export function initializeIDE(container) {
+    const editor = monaco.editor.create(container, {
+        value: "// Write your code here...",
+        language: "javascript",
+        theme: "vs-dark",
+        automaticLayout: true,
+    });
+
+    // Trigger autocomplete when user types
+    editor.onDidChangeModelContent(async function () {
+        const currentPosition = editor.getPosition();
+        const line = currentPosition.lineNumber;
+        const column = currentPosition.column;
+        const currentText = editor.getModel().getLineContent(line);
+
+        const suggestions = await getAutocompleteSuggestions(currentText);
+        showSuggestions(editor, suggestions, line, column);
+    });
+
+    return editor;
+}
+
+// Display autocomplete suggestions inside the editor
+function showSuggestions(editor, suggestions, line, column) {
+    const suggestionBox = document.createElement("div");
+    suggestionBox.classList.add("autocomplete-box");
+
+    suggestions.forEach(suggestion => {
+        const suggestionItem = document.createElement("div");
+        suggestionItem.classList.add("autocomplete-item");
+        suggestionItem.textContent = suggestion;
+        suggestionItem.addEventListener("click", function () {
+            editor.executeEdits("", [{
+                range: new monaco.Range(line, column, line, column),
+                text: suggestion,
+                forceMoveMarkers: true
+            }]);
+            suggestionBox.innerHTML = "";
+        });
+        suggestionBox.appendChild(suggestionItem);
+    });
+
+    const editorElement = document.getElementById("editor");
+    editorElement.appendChild(suggestionBox);
+    suggestionBox.style.top = `${line * 20}px`; // Position below the line
+    suggestionBox.style.left = `${column * 10}px`; // Adjust horizontal position
+}
 
 const API_KEY = ""; // Get yours at https://platform.sulu.sh/apis/judge0
 
